@@ -4,7 +4,6 @@
   import { getClientTodayISODate } from '$lib/db';
   import {
     todayActiveContracts,
-    killedContracts,
     vaultCount,
     settings,
     isLoading,
@@ -89,6 +88,17 @@
     </h1>
 
     <div class="flex items-center gap-3">
+      <!-- Morgue button (Skull icon) -->
+      <a
+        href="/morgue"
+        class="w-10 h-10 rounded-full border border-kl-gold/40 flex items-center justify-center text-kl-gold hover:border-kl-gold hover:bg-kl-gold/10 transition-colors"
+        title="The Morgue"
+      >
+        <svg class="w-5 h-5" viewBox="0 0 318 412" fill="currentColor">
+          <path d="M 171.00 318.50 L 164.00 318.50 L 162.50 317.00 L 161.50 300.00 L 160.00 298.50 L 158.50 301.00 L 158.50 317.00 L 157.00 318.50 L 144.50 316.00 L 143.00 300.50 L 141.00 316.50 L 130.50 314.00 L 129.00 298.50 L 127.00 314.50 L 119.50 311.00 L 117.00 295.50 L 115.00 310.50 L 109.50 308.00 L 108.00 293.50 L 105.50 297.00 L 105.50 307.00 L 103.00 306.50 L 101.50 305.00 L 101.50 290.00 L 99.50 281.00 L 92.50 266.00 L 80.00 255.50 L 65.00 253.50 L 53.00 247.50 L 48.50 242.00 L 45.50 234.00 L 46.50 221.00 L 56.50 202.00 L 55.50 180.00 L 45.50 157.00 L 41.50 141.00 L 41.50 123.00 L 48.50 97.00 L 61.50 73.00 L 82.00 51.50 L 104.00 38.50 L 130.00 31.50 L 192.00 31.50 L 210.00 35.50 L 231.00 44.50 L 244.00 53.50 L 262.50 74.00 L 271.50 92.00 L 278.50 116.00 L 278.50 147.00 L 264.50 185.00 L 265.50 206.00 L 275.50 225.00 L 275.50 234.00 L 272.50 242.00 L 265.00 249.50 L 256.00 253.50 L 241.00 255.50 L 235.00 258.50 L 227.50 266.00 L 220.50 282.00 L 219.50 304.00 L 218.00 305.50 L 215.50 305.00 L 215.50 295.00 L 214.00 294.50 L 212.50 308.00 L 207.00 310.50 L 205.50 309.00 L 206.50 300.00 L 204.00 296.50 L 202.50 311.00 L 195.00 313.50 L 194.50 302.00 L 192.00 298.50 L 190.50 314.00 L 181.00 317.50 L 179.50 316.00 L 179.50 302.00 L 178.00 300.50 L 176.50 316.00 L 171.00 318.50 Z M 110.00 240.50 L 100.00 240.50 L 87.00 236.50 L 77.50 229.00 L 73.50 222.00 L 71.50 213.00 L 73.50 197.00 L 79.50 186.00 L 87.00 180.50 L 96.00 178.50 L 106.00 178.50 L 107.00 179.50 L 117.00 179.50 L 126.00 181.50 L 135.00 185.50 L 142.50 193.00 L 144.50 197.00 L 145.50 202.00 L 144.50 214.00 L 136.50 229.00 L 128.00 235.50 L 110.00 240.50 Z M 221.00 240.50 L 211.00 240.50 L 198.00 237.50 L 188.00 232.50 L 181.50 225.00 L 176.50 214.00 L 175.50 202.00 L 178.50 193.00 L 186.00 185.50 L 192.00 182.50 L 204.00 179.50 L 225.00 178.50 L 236.00 181.50 L 241.50 186.00 L 245.50 192.00 L 249.50 207.00 L 248.50 219.00 L 245.50 226.00 L 240.00 232.50 L 234.00 236.50 L 221.00 240.50 Z M 176.00 280.50 L 170.00 280.50 L 161.00 274.50 L 151.00 280.50 L 145.00 280.50 L 142.00 279.50 L 138.50 275.00 L 139.50 263.00 L 150.50 240.00 L 155.00 234.50 L 165.00 234.50 L 168.50 237.00 L 181.50 263.00 L 182.50 275.00 L 179.00 279.50 L 176.00 280.50 Z" fill-rule="evenodd"/>
+        </svg>
+      </a>
+
       <!-- Add button -->
       <button
         type="button"
@@ -142,68 +152,6 @@
       </div>
     {/if}
 
-    <!-- Archive Section (Killed Contracts) -->
-    {#if $killedContracts.length > 0}
-      <section class="mt-12">
-        <h2 class="text-xs tracking-widest text-kl-gold/50 mb-6" style="font-family: 'JetBrains Mono', monospace;">
-          ARCHIVE
-        </h2>
-
-        <div class="space-y-4">
-          {#each $killedContracts as contract (contract.id)}
-            {@const isHighTableOrder = contract.priority === 'highTable'}
-            {@const killedDate = contract.killedAt ? new Date(contract.killedAt) : new Date(contract.createdAt)}
-            {@const timeStr = killedDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-            
-            <div class="flex items-start gap-4">
-              <!-- Left: Timeline + Icon -->
-              <div class="flex items-center gap-3">
-                <!-- Vertical line -->
-                <div class="w-0.5 h-16 self-stretch {isHighTableOrder ? 'bg-kl-crimson' : 'bg-kl-gold/60'}"></div>
-                
-                <!-- Circle icon -->
-                {#if isHighTableOrder}
-                  <!-- High Table: Filled red circle with dot -->
-                  <div class="w-12 h-12 rounded-full border-2 border-kl-crimson flex items-center justify-center bg-kl-gunmetal flex-shrink-0">
-                    <div class="w-4 h-4 rounded-full bg-kl-crimson"></div>
-                  </div>
-                {:else}
-                  <!-- Normal: Gold crosshair icon -->
-                  <div class="w-12 h-12 rounded-full border border-kl-gold/50 flex items-center justify-center bg-kl-gunmetal flex-shrink-0">
-                    <svg class="w-6 h-6 text-kl-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                      <circle cx="12" cy="12" r="8" />
-                      <circle cx="12" cy="12" r="2" />
-                      <line x1="12" y1="2" x2="12" y2="6" />
-                      <line x1="12" y1="18" x2="12" y2="22" />
-                      <line x1="2" y1="12" x2="6" y2="12" />
-                      <line x1="18" y1="12" x2="22" y2="12" />
-                    </svg>
-                  </div>
-                {/if}
-              </div>
-
-              <!-- Content -->
-              <div class="flex-1 min-w-0 pt-1">
-                <h3 
-                  class="text-base line-through {isHighTableOrder ? 'text-kl-crimson' : 'text-kl-gold'}"
-                  style="font-family: 'JetBrains Mono', monospace;"
-                >
-                  {contract.title}
-                </h3>
-                <p class="text-xs mt-1 text-kl-gold/60" style="font-family: 'JetBrains Mono', monospace;">
-                  STATUS: TERMINATED
-                </p>
-              </div>
-
-              <!-- Time -->
-              <div class="text-xs text-kl-gold/50 whitespace-nowrap pt-1" style="font-family: 'JetBrains Mono', monospace;">
-                {timeStr} HRS
-              </div>
-            </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
   </main>
 
   <!-- FAB: Create Contract -->
