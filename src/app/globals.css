@@ -1,26 +1,206 @@
 @import "tailwindcss";
 
+/* ===== KILL LIST - "Continental" Design System ===== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Core palette */
+  --kl-black: #050505;
+  --kl-gold: #D4AF37;
+  --kl-crimson: #990000;
+  --kl-gunmetal: #1A1A1A;
+  --kl-gold-dim: #8B7355;
+  
+  /* Semantic */
+  --background: var(--kl-black);
+  --foreground: var(--kl-gold);
+  --accent: var(--kl-gold);
+  --danger: var(--kl-crimson);
+  --surface: var(--kl-gunmetal);
+  
+  /* Shadows */
+  --shadow-heavy: 0 8px 32px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.6);
+  --shadow-glow-gold: 0 0 20px rgba(212, 175, 55, 0.3);
+  --shadow-glow-crimson: 0 0 20px rgba(153, 0, 0, 0.4);
+}
+
+/* Excommunicado state - global shift to crimson */
+:root.excommunicado {
+  --accent: var(--kl-crimson);
+  --foreground: var(--kl-crimson);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-surface: var(--surface);
+  --color-kl-black: var(--kl-black);
+  --color-kl-gold: var(--kl-gold);
+  --color-kl-crimson: var(--kl-crimson);
+  --color-kl-gunmetal: var(--kl-gunmetal);
+  --color-kl-gold-dim: var(--kl-gold-dim);
+  
+  --font-heading: var(--font-cinzel);
+  --font-body: var(--font-jetbrains);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  background: var(--kl-black);
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--kl-black);
+  color: var(--kl-gold);
+  font-family: var(--font-jetbrains), 'JetBrains Mono', 'Courier Prime', monospace;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Noise overlay for texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Selection colors */
+::selection {
+  background: var(--kl-gold);
+  color: var(--kl-black);
+}
+
+:root.excommunicado ::selection {
+  background: var(--kl-crimson);
+  color: white;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--kl-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--kl-gold-dim);
+}
+
+:root.excommunicado ::-webkit-scrollbar-thumb {
+  background: var(--kl-crimson);
+}
+
+/* Typography utilities */
+.font-heading {
+  font-family: var(--font-cinzel), 'Cinzel', 'Playfair Display', serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.font-body {
+  font-family: var(--font-jetbrains), 'JetBrains Mono', monospace;
+}
+
+/* Sharp edges - no rounded corners */
+.sharp {
+  border-radius: 0 !important;
+}
+
+/* Animations */
+@keyframes pulse-gold {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes pulse-crimson {
+  0%, 100% { opacity: 0.4; box-shadow: 0 0 10px var(--kl-crimson); }
+  50% { opacity: 1; box-shadow: 0 0 30px var(--kl-crimson); }
+}
+
+@keyframes fill-up {
+  from { clip-path: inset(100% 0 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes slash {
+  from { 
+    width: 0; 
+    opacity: 1;
+  }
+  to { 
+    width: 100%; 
+    opacity: 1;
+  }
+}
+
+@keyframes coin-fly {
+  0% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.5) translateY(-100px);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0.2) translateY(-200px) translateX(var(--coin-target-x, 100px));
+    opacity: 0;
+  }
+}
+
+@keyframes vault-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+.animate-pulse-gold {
+  animation: pulse-gold 2s ease-in-out infinite;
+}
+
+.animate-pulse-crimson {
+  animation: pulse-crimson 1s ease-in-out infinite;
+}
+
+.animate-slash {
+  animation: slash 0.2s ease-out forwards;
+}
+
+.animate-coin-fly {
+  animation: coin-fly 0.6s ease-out forwards;
+}
+
+.animate-vault-pulse {
+  animation: vault-pulse 0.3s ease-out;
+}
+
+.animate-shake {
+  animation: shake 0.1s ease-in-out;
+}
+
+/* Prevent bounce scrolling on iOS */
+@supports (-webkit-touch-callout: none) {
+  body {
+    overscroll-behavior: none;
+  }
 }

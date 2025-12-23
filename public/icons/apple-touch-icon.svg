@@ -1,0 +1,19 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="180" height="180" fill="#050505"/>
+  
+  <!-- Continental coin -->
+  <circle cx="90" cy="90" r="65" stroke="#D4AF37" stroke-width="4" fill="none"/>
+  <circle cx="90" cy="90" r="50" stroke="#D4AF37" stroke-width="2" fill="none"/>
+  
+  <!-- Cross -->
+  <line x1="90" y1="45" x2="90" y2="135" stroke="#D4AF37" stroke-width="4"/>
+  <line x1="45" y1="90" x2="135" y2="90" stroke="#D4AF37" stroke-width="4"/>
+  
+  <!-- Corner accents -->
+  <rect x="55" y="55" width="10" height="10" fill="#D4AF37"/>
+  <rect x="115" y="55" width="10" height="10" fill="#D4AF37"/>
+  <rect x="55" y="115" width="10" height="10" fill="#D4AF37"/>
+  <rect x="115" y="115" width="10" height="10" fill="#D4AF37"/>
+</svg>
+
