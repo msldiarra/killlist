@@ -18,7 +18,8 @@
     registryCount
   } from '$lib/stores/contracts';
   import { trackDossierFiled, trackOathCompleted } from '$lib/analytics';
-  import { playLoad, triggerHapticFeedback, unlockAudio } from '$lib/audio';
+  import { playLoad, unlockAudio } from '$lib/audio';
+  import { vibrate, HapticPatterns } from '$lib/haptic';
 
   // UI State
   let showOath = $state(true);
@@ -87,7 +88,7 @@
       // Play "Lock and Load" sound (load.mp3)
       playLoad();
       // Trigger heavy vibration for haptic feedback
-      triggerHapticFeedback('heavy');
+      vibrate(HapticPatterns.Heavy);
     }
     
     // Track analytics

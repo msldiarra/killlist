@@ -11,7 +11,8 @@
     acceptContractOptimistic,
     deleteContractOptimistic
   } from '$lib/stores/contracts';
-  import { playLoad, triggerHapticFeedback, unlockAudio } from '$lib/audio';
+  import { playLoad, unlockAudio } from '$lib/audio';
+  import { vibrate, HapticPatterns } from '$lib/haptic';
   import { trackContractAccepted, trackDossierFiled } from '$lib/analytics';
 
   // UI State
@@ -50,7 +51,7 @@
       // Play "Lock and Load" sound (load.mp3)
       playLoad();
       // Trigger heavy vibration for haptic feedback
-      triggerHapticFeedback('heavy');
+      vibrate(HapticPatterns.Heavy);
     }
     
     // Track analytics

@@ -14,7 +14,7 @@ let uploadSound: HTMLAudioElement | null = null;
  */
 function preloadSounds(): void {
   if (typeof window === 'undefined') return;
-  
+
   if (!loadSound) {
     loadSound = new Audio('/sound/load.mp3');
     loadSound.preload = 'auto';
@@ -36,7 +36,7 @@ function preloadSounds(): void {
 export function playLoad(): void {
   if (typeof window === 'undefined') return;
   preloadSounds();
-  
+
   if (loadSound) {
     loadSound.currentTime = 0;
     loadSound.play().catch(() => {
@@ -53,7 +53,7 @@ export function playLoad(): void {
 export function playExecuteSound(): void {
   if (typeof window === 'undefined') return;
   preloadSounds();
-  
+
   if (executeSound) {
     executeSound.currentTime = 0;
     executeSound.play().catch(() => {
@@ -70,7 +70,7 @@ export function playExecuteSound(): void {
 export function playUpload(): void {
   if (typeof window === 'undefined') return;
   preloadSounds();
-  
+
   if (uploadSound) {
     uploadSound.currentTime = 0;
     uploadSound.play().catch(() => {
@@ -85,7 +85,7 @@ export function playUpload(): void {
  */
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
-  
+
   if (!audioContext) {
     try {
       const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -104,10 +104,10 @@ function getAudioContext(): AudioContext | null {
  */
 export async function unlockAudio(): Promise<void> {
   if (isUnlocked) return;
-  
+
   const ctx = getAudioContext();
   if (!ctx) return;
-  
+
   if (ctx.state === 'suspended') {
     try {
       await ctx.resume();
@@ -115,7 +115,7 @@ export async function unlockAudio(): Promise<void> {
       console.warn('Failed to resume AudioContext:', e);
     }
   }
-  
+
   // Play a silent buffer to fully unlock on iOS
   try {
     const buffer = ctx.createBuffer(1, 1, 22050);
@@ -126,7 +126,7 @@ export async function unlockAudio(): Promise<void> {
   } catch {
     // Ignore errors
   }
-  
+
   isUnlocked = true;
 }
 
@@ -148,7 +148,7 @@ function playTone(
 ): void {
   const ctx = getAudioContext();
   if (!ctx || ctx.state === 'suspended') return;
-  
+
   try {
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
@@ -274,7 +274,7 @@ export function playAcceptContract(): void {
   try {
     // First click - slide back
     playTone(800, 0.03, 'square', 0.4);
-    
+
     // Metallic slide
     setTimeout(() => {
       const bufferSize = ctx.sampleRate * 0.08;
@@ -381,22 +381,4 @@ export function isTickingActive(): boolean {
   return tickingInterval !== null;
 }
 
-/**
- * Trigger haptic feedback (vibration) if supported
- * Used for Contract Accepted Immediately feedback
- */
-export function triggerHapticFeedback(intensity: 'light' | 'medium' | 'heavy' = 'heavy'): void {
-  if (typeof window === 'undefined' || !navigator.vibrate) return;
-  
-  const patterns: Record<string, number[]> = {
-    light: [10],
-    medium: [20, 10, 20],
-    heavy: [50, 20, 50, 20, 50]
-  };
-  
-  try {
-    navigator.vibrate(patterns[intensity]);
-  } catch {
-    // Silently fail if vibration not supported
-  }
-}
+
