@@ -1,6 +1,7 @@
 <script lang="ts">
   import { addContract } from '$lib/stores/contracts';
-  import { playCoin } from '$lib/audio';
+  import { playUpload } from '$lib/audio';
+  import { success } from '$lib/haptics';
   import { trackDeadDropUsed } from '$lib/analytics';
 
   // Props
@@ -62,12 +63,13 @@
     scrambledText = '';
     isScrambling = false;
 
-    // Play sound
-    playCoin();
-
     // Add to store
     addContract(title);
     onAdd?.(title);
+    
+    // Audio and haptic feedback (after animation)
+    playUpload();
+    success();
     
     // Track analytics
     trackDeadDropUsed();

@@ -10,7 +10,8 @@
     acceptContractOptimistic,
     deleteContractOptimistic
   } from '$lib/stores/contracts';
-  import { playAcceptContract, triggerHapticFeedback, isAudioUnlocked } from '$lib/audio';
+  import { playLoad, isAudioUnlocked } from '$lib/audio';
+  import { click, impact } from '$lib/haptics';
   import { trackContractAccepted, trackDossierFiled } from '$lib/analytics';
 
   // UI State
@@ -38,12 +39,8 @@
     
     // Visual/Audio feedback for Active contracts
     if (status === 'active') {
-      // Play "Load" sound (accept contract sound) if audio is ready
-      if (isAudioUnlocked()) {
-        playAcceptContract();
-      }
-      // Trigger heavy vibration as backup feedback
-      triggerHapticFeedback('heavy');
+      playLoad();
+      impact();
     }
     
     // Track analytics
@@ -56,7 +53,8 @@
   }
 
   function handleAccept(id: string) {
-    playAcceptContract();
+    playLoad();
+    click();
     acceptContractOptimistic(id);
     trackContractAccepted();
   }

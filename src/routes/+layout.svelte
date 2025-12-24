@@ -15,7 +15,7 @@
     startDeadlineMonitoring,
     stopDeadlineMonitoring
   } from '$lib/stores/contracts';
-  import { playChargeUp, playKillConfirm } from '$lib/audio';
+  import { playChargeUp, playKillConfirm, initAudio } from '$lib/audio';
   import { initAnalytics, trackContractKilled, trackContractsBurned } from '$lib/analytics';
 
   let { children } = $props();
@@ -40,6 +40,9 @@
     
     // Initialize analytics (privacy-first)
     await initAnalytics();
+    
+    // Initialize audio (preload sounds)
+    initAudio();
     
     // Initialize app
     await initializeStores();
