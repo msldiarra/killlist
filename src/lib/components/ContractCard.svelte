@@ -140,7 +140,7 @@
         <!-- Priority badge -->
         {#if isExecutiveOrder}
           <div
-            class="flex-shrink-0 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-kl-gold/10 border border-kl-gold/30 text-kl-gold"
+            class="flex-shrink-0 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-kl-crimson/10 border border-kl-crimson/30 text-kl-crimson"
             style="font-family: 'JetBrains Mono', monospace;"
           >
             PRIORITY

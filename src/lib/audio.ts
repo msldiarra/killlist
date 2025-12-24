@@ -304,3 +304,23 @@ export function stopTicking(): void {
 export function isTickingActive(): boolean {
   return tickingInterval !== null;
 }
+
+/**
+ * Trigger haptic feedback (vibration) if supported
+ * Used for Contract Accepted Immediately feedback
+ */
+export function triggerHapticFeedback(intensity: 'light' | 'medium' | 'heavy' = 'heavy'): void {
+  if (typeof window === 'undefined' || !navigator.vibrate) return;
+  
+  const patterns: Record<string, number[]> = {
+    light: [10],
+    medium: [20, 10, 20],
+    heavy: [50, 20, 50, 20, 50]
+  };
+  
+  try {
+    navigator.vibrate(patterns[intensity]);
+  } catch {
+    // Silently fail if vibration not supported
+  }
+}

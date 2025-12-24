@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
+  import { page } from '$app/stores';
   import OathScreen from '$lib/components/OathScreen.svelte';
   import ContractCard from '$lib/components/ContractCard.svelte';
   import BottomNav from '$lib/components/BottomNav.svelte';
@@ -17,6 +18,7 @@
     registryCount
   } from '$lib/stores/contracts';
   import { trackDossierFiled, trackOathCompleted } from '$lib/analytics';
+  import { playAcceptContract, triggerHapticFeedback, isAudioUnlocked } from '$lib/audio';
 
   // UI State
   let showOath = $state(true);
@@ -67,11 +69,26 @@
     e.preventDefault();
     if (!newContractTitle.trim()) return;
 
-    // Creates in Registry - user must accept to start timer
+    // Context-aware creation based on current route
+    const isActiveRoute = $page.url.pathname === '/';
+    const status = isActiveRoute ? 'active' : 'registry';
+    
+    // Create contract with appropriate status
     addContract(
       newContractTitle.trim(),
-      isHighTable ? 'highTable' : 'normal'
+      isHighTable ? 'highTable' : 'normal',
+      status
     );
+    
+    // Visual/Audio feedback for Active contracts
+    if (status === 'active') {
+      // Play "Load" sound (accept contract sound) if audio is ready
+      if (isAudioUnlocked()) {
+        playAcceptContract();
+      }
+      // Trigger heavy vibration as backup feedback
+      triggerHapticFeedback('heavy');
+    }
     
     // Track analytics
     trackDossierFiled({ is_executive_order: isHighTable });
@@ -200,7 +217,7 @@
             </h3>
             
             <p class="text-xs text-kl-gold/50 mb-6">
-              Deadline: Tonight at 23:59 when accepted
+              {$page.url.pathname === '/' ? 'Contract Accepted Immediately - Deadline: Tonight at 23:59' : 'Deadline: Tonight at 23:59 when accepted'}
             </p>
 
             <div class="space-y-5">

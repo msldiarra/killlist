@@ -164,18 +164,37 @@ export async function cleanHouse(): Promise<void> {
  * The 24h burn timer only starts when accepted.
  * Deadline is always 23:59 (end of day) - user doesn't choose.
  */
+/**
+ * Create a new contract.
+ * @param title - Contract title
+ * @param priority - Priority level (normal or highTable)
+ * @param status - Contract status ('registry' or 'active'). Defaults to 'registry'.
+ *                 If 'active', targetDate is set to today and terminusTime to 23:59.
+ */
 export function addContract(
   title: string,
-  priority: 'normal' | 'highTable' = 'normal'
+  priority: 'normal' | 'highTable' = 'normal',
+  status: 'registry' | 'active' = 'registry'
 ): Contract {
+  const today = getClientTodayISODate();
+  const acceptedAt = status === 'active' ? new Date().toISOString() : undefined;
+  
   const newContract: Contract = {
     id: generateId(),
     title,
-    // No targetDate - will be set when accepted
-    // terminusTime is always 23:59 - set on acceptance
     priority,
-    status: 'registry', // Start in backlog
-    createdAt: new Date().toISOString()
+    status,
+    createdAt: new Date().toISOString(),
+    // If active, set deadline immediately
+    ...(status === 'active' ? {
+      targetDate: today,
+      terminusTime: '23:59',
+      acceptedAt
+    } : {
+      // Registry contracts have no deadline until accepted
+      targetDate: undefined,
+      terminusTime: undefined
+    })
   };
 
   // INSTANT: Update store immediately

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { page } from '$app/stores';
   import BottomNav from '$lib/components/BottomNav.svelte';
   import DeadDrop from '$lib/components/DeadDrop.svelte';
   import {
@@ -9,7 +10,7 @@
     acceptContractOptimistic,
     deleteContractOptimistic
   } from '$lib/stores/contracts';
-  import { playAcceptContract } from '$lib/audio';
+  import { playAcceptContract, triggerHapticFeedback, isAudioUnlocked } from '$lib/audio';
   import { trackContractAccepted, trackDossierFiled } from '$lib/analytics';
 
   // UI State
@@ -24,10 +25,26 @@
     e.preventDefault();
     if (!newContractTitle.trim()) return;
 
+    // Context-aware creation based on current route
+    const isActiveRoute = $page.url.pathname === '/';
+    const status = isActiveRoute ? 'active' : 'registry';
+    
+    // Create contract with appropriate status
     addContract(
       newContractTitle.trim(),
-      isHighTable ? 'highTable' : 'normal'
+      isHighTable ? 'highTable' : 'normal',
+      status
     );
+    
+    // Visual/Audio feedback for Active contracts
+    if (status === 'active') {
+      // Play "Load" sound (accept contract sound) if audio is ready
+      if (isAudioUnlocked()) {
+        playAcceptContract();
+      }
+      // Trigger heavy vibration as backup feedback
+      triggerHapticFeedback('heavy');
+    }
     
     // Track analytics
     trackDossierFiled({ is_executive_order: isHighTable });
@@ -242,7 +259,7 @@
             </h3>
             
             <p class="text-xs text-neutral-500 mb-6">
-              Deadline: Tonight at 23:59 when accepted
+              {$page.url.pathname === '/' ? 'Contract Accepted Immediately - Deadline: Tonight at 23:59' : 'Deadline: Tonight at 23:59 when accepted'}
             </p>
 
             <div class="space-y-5">
