@@ -1,5 +1,6 @@
 <script lang="ts">
   import BottomNav from '$lib/components/BottomNav.svelte';
+  import DeadDrop from '$lib/components/DeadDrop.svelte';
   import {
     registryContracts,
     registryCount,
@@ -84,28 +85,34 @@
   <title>THE REGISTRY | KILL LIST</title>
 </svelte:head>
 
-<div class="min-h-screen bg-kl-black flex flex-col pb-20" style="font-family: 'JetBrains Mono', monospace;">
-  <!-- Header -->
-  <header class="flex items-center justify-between px-6 py-5 border-b border-neutral-700/30">
-    <h1 class="text-xl tracking-widest text-neutral-400">
-      THE REGISTRY
-    </h1>
-
-    <div class="flex items-center gap-3">
-      <!-- Add button -->
+<div class="min-h-screen bg-kl-black flex flex-col pb-36" style="font-family: 'JetBrains Mono', monospace;">
+  <!-- Header: Vault-style with Pending Bounties Counter -->
+  <header class="px-6 py-6 border-b border-neutral-700/30 bg-neutral-900/50">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-sm tracking-widest text-neutral-500 uppercase">
+        The Registry
+      </h1>
+      
+      <!-- Add Contract button -->
       <button
         type="button"
-        class="w-10 h-10 rounded-full border border-neutral-600 flex items-center justify-center text-neutral-400 hover:border-neutral-400 transition-colors"
+        class="w-10 h-10 rounded-full border border-kl-gold/40 flex items-center justify-center text-kl-gold hover:border-kl-gold hover:bg-kl-gold/10 transition-colors"
         onclick={() => (showCreateForm = true)}
+        title="Add Contract"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
         </svg>
       </button>
+    </div>
 
-      <!-- Count -->
-      <span class="text-neutral-500 text-lg">
+    <!-- Pending Bounties Counter (Bank Balance Style) -->
+    <div class="flex items-baseline gap-3">
+      <span class="text-5xl font-bold text-kl-gold tabular-nums tracking-tight">
         {$registryCount}
+      </span>
+      <span class="text-xs tracking-widest text-kl-gold/50 uppercase">
+        Pending Bounties
       </span>
     </div>
   </header>
@@ -113,7 +120,7 @@
   <!-- Subtitle -->
   <div class="px-6 py-3 border-b border-neutral-800">
     <p class="text-[10px] tracking-widest text-neutral-600 uppercase">
-      COLD STORAGE • SWIPE RIGHT TO ACCEPT
+      Cold Storage • Swipe Right to Accept
     </p>
   </div>
 
@@ -214,18 +221,10 @@
     {/if}
   </main>
 
-  <!-- FAB: Create Contract -->
-  <button
-    type="button"
-    class="fixed bottom-20 right-6 w-14 h-14 bg-neutral-700 text-neutral-300 flex items-center justify-center z-40 active:scale-95 transition-transform hover:bg-neutral-600"
-    onclick={() => (showCreateForm = true)}
-  >
-    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-    </svg>
-  </button>
+  <!-- Dead Drop Quick Input -->
+  <DeadDrop />
 
-  <!-- Create Contract Modal -->
+  <!-- Advanced Options Modal -->
   {#if showCreateForm}
     <div class="fixed inset-0 bg-black/90 z-50 flex items-end">
       <div class="w-full bg-neutral-900 border-t border-neutral-700 max-h-[90vh] overflow-y-auto pb-20">
@@ -237,11 +236,11 @@
 
           <form onsubmit={handleCreateContract}>
             <h3 class="text-xl tracking-widest text-neutral-300 mb-2">
-              NEW DOSSIER
+              ADVANCED DOSSIER
             </h3>
             
             <p class="text-xs text-neutral-500 mb-6">
-              Added to Registry • Accept to start 24h timer
+              Set terminus time and priority level
             </p>
 
             <div class="space-y-5">
