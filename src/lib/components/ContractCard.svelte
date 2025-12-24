@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Contract } from '$lib/db';
   import { playExecute } from '$lib/audio';
+  import { trackContractKilled, trackContractAborted } from '$lib/analytics';
 
   // Props
   interface Props {
@@ -67,6 +68,15 @@
 
     // Show KILLED stamp
     showKilledStamp = true;
+    
+    // Track the kill via swipe
+    const acceptedAt = contract.acceptedAt ? new Date(contract.acceptedAt).getTime() : null;
+    const timeToKill = acceptedAt ? Date.now() - acceptedAt : undefined;
+    trackContractKilled({
+      method: 'swipe',
+      time_to_kill_ms: timeToKill,
+      is_executive_order: contract.priority === 'highTable'
+    });
 
     // Slide out and trigger completion
     setTimeout(() => {
@@ -78,6 +88,7 @@
   }
 
   function handleAbort() {
+    trackContractAborted();
     onAbort?.(contract.id);
   }
 

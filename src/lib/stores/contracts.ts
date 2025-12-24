@@ -105,9 +105,10 @@ export async function initializeStores(): Promise<void> {
  * Run the Burn Protocol on app start.
  * - Burns stale active contracts from previous days
  * - Opens Mission Report modal if any were burned
+ * @returns Number of contracts burned
  */
-export async function runBurnProtocolOnStart(): Promise<void> {
-  if (!browser) return;
+export async function runBurnProtocolOnStart(): Promise<number> {
+  if (!browser) return 0;
 
   // Refresh today's date
   refreshTodayDate();
@@ -127,6 +128,8 @@ export async function runBurnProtocolOnStart(): Promise<void> {
     morningReportBurned.set(burned);
     morningReportOpen.set(true);
   }
+  
+  return burned.length;
 }
 
 /**

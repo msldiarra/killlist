@@ -10,6 +10,7 @@
     deleteContractOptimistic
   } from '$lib/stores/contracts';
   import { playAcceptContract } from '$lib/audio';
+  import { trackContractAccepted, trackDossierFiled } from '$lib/analytics';
 
   // UI State
   let showCreateForm = $state(false);
@@ -27,6 +28,9 @@
       newContractTitle.trim(),
       isHighTable ? 'highTable' : 'normal'
     );
+    
+    // Track analytics
+    trackDossierFiled({ is_executive_order: isHighTable });
 
     // Reset form
     newContractTitle = '';
@@ -37,6 +41,7 @@
   function handleAccept(id: string) {
     playAcceptContract();
     acceptContractOptimistic(id);
+    trackContractAccepted();
   }
 
   function handleDelete(id: string) {

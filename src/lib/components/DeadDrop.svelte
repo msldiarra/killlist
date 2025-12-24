@@ -1,6 +1,7 @@
 <script lang="ts">
   import { addContract } from '$lib/stores/contracts';
   import { playCoin } from '$lib/audio';
+  import { trackDeadDropUsed } from '$lib/analytics';
 
   // Props
   let {
@@ -67,6 +68,9 @@
     // Add to store
     addContract(title);
     onAdd?.(title);
+    
+    // Track analytics
+    trackDeadDropUsed();
 
     // Phase 3: Fly animation (handled by CSS), then hide
     await new Promise((resolve) => setTimeout(resolve, 500));

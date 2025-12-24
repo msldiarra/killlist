@@ -16,6 +16,7 @@
     openCount,
     registryCount
   } from '$lib/stores/contracts';
+  import { trackDossierFiled, trackOathCompleted } from '$lib/analytics';
 
   // UI State
   let showOath = $state(true);
@@ -47,6 +48,9 @@
     completeOnboardingOptimistic();
     showOath = false;
     
+    // Track oath completion
+    trackOathCompleted();
+    
     // First-time users go to Registry to start adding contracts
     goto('/registry');
   }
@@ -68,6 +72,9 @@
       newContractTitle.trim(),
       isHighTable ? 'highTable' : 'normal'
     );
+    
+    // Track analytics
+    trackDossierFiled({ is_executive_order: isHighTable });
 
     // Reset form
     newContractTitle = '';

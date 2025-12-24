@@ -16,6 +16,7 @@
     stopDeadlineMonitoring
   } from '$lib/stores/contracts';
   import { playChargeUp, playKillConfirm } from '$lib/audio';
+  import { initAnalytics, trackContractKilled, trackContractsBurned } from '$lib/analytics';
 
   let { children } = $props();
 
@@ -37,9 +38,17 @@
   onMount(async () => {
     const splashStart = Date.now();
     
+    // Initialize analytics (privacy-first)
+    await initAnalytics();
+    
     // Initialize app
     await initializeStores();
-    await runBurnProtocolOnStart();
+    const burnedCount = await runBurnProtocolOnStart();
+    
+    // Track burned contracts if any
+    if (burnedCount && burnedCount > 0) {
+      trackContractsBurned(burnedCount);
+    }
     
     // Start real-time deadline monitoring (checks every 30s)
     startDeadlineMonitoring();
@@ -115,6 +124,15 @@
       if (topContract) {
         playKillConfirm();
         killContractOptimistic(topContract.id);
+        
+        // Track the kill via spacebar
+        const acceptedAt = topContract.acceptedAt ? new Date(topContract.acceptedAt).getTime() : null;
+        const timeToKill = acceptedAt ? Date.now() - acceptedAt : undefined;
+        trackContractKilled({
+          method: 'spacebar',
+          time_to_kill_ms: timeToKill,
+          is_executive_order: topContract.priority === 'highTable'
+        });
       }
     }
 
