@@ -209,7 +209,7 @@
 
 <!-- Secure Comms Prompt -->
 {#if showNotificationPrompt}
-  <div class="fixed bottom-4 right-4 z-[110]">
+  <div class="fixed bottom-35 right-4 z-[110]">
     <button
       class="bg-neutral-900 border border-kl-gold/30 text-kl-gold text-[10px] uppercase tracking-widest px-3 py-2 hover:bg-kl-gold/10 transition-colors"
       style="font-family: 'JetBrains Mono', monospace;"
