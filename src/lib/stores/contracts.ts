@@ -12,6 +12,7 @@ import {
   getAllContracts,
   getClientTodayISODate
 } from '$lib/db';
+import { trackContractsBurned } from '$lib/analytics';
 import { checkBurnProtocol, deleteBurnedContracts } from '$lib/burnProtocol';
 
 // ===== Core Stores =====
@@ -79,18 +80,18 @@ export const openCount = derived(todayActiveContracts, ($active) => $active.leng
 // ===== Initialize Stores from DB =====
 export async function initializeStores(): Promise<void> {
   if (!browser) return;
-  
+
   isLoading.set(true);
-  
+
   try {
     // Refresh today's date
     refreshTodayDate();
-    
+
     const [loadedSettings, allContracts] = await Promise.all([
       getSettings(),
       getAllContracts()
     ]);
-    
+
     settings.set(loadedSettings);
     contracts.set(allContracts);
   } catch (error) {
@@ -128,7 +129,7 @@ export async function runBurnProtocolOnStart(): Promise<number> {
     morningReportBurned.set(burned);
     morningReportOpen.set(true);
   }
-  
+
   return burned.length;
 }
 
@@ -178,7 +179,7 @@ export function addContract(
 ): Contract {
   const today = getClientTodayISODate();
   const acceptedAt = status === 'active' ? new Date().toISOString() : undefined;
-  
+
   const newContract: Contract = {
     id: generateId(),
     title,
@@ -230,11 +231,11 @@ export function acceptContractOptimistic(id: string): void {
   );
 
   // ASYNC: Persist to DB
-  db.contracts.update(id, { 
-    status: 'active', 
+  db.contracts.update(id, {
+    status: 'active',
     targetDate: today,
     terminusTime,
-    acceptedAt 
+    acceptedAt
   }).catch((err) => {
     console.error('Failed to accept contract:', err);
     // Rollback on failure
@@ -292,11 +293,11 @@ export function abortContractOptimistic(id: string): void {
   );
 
   // ASYNC: Persist to DB
-  db.contracts.update(id, { 
-    status: 'registry', 
-    targetDate: undefined, 
+  db.contracts.update(id, {
+    status: 'registry',
+    targetDate: undefined,
     terminusTime: undefined,
-    acceptedAt: undefined 
+    acceptedAt: undefined
   }).catch((err) => {
     console.error('Failed to abort contract:', err);
   });
@@ -350,13 +351,13 @@ let deadlineCheckInterval: ReturnType<typeof setInterval> | null = null;
 function isDeadlinePassed(contract: Contract): boolean {
   // Registry contracts have no targetDate - they can't be overdue
   if (!contract.targetDate) return false;
-  
+
   const now = new Date();
   const today = getClientTodayISODate();
-  
+
   // If targetDate is before today, it's definitely passed
   if (contract.targetDate < today) return true;
-  
+
   // If targetDate is today, check the terminus time
   if (contract.targetDate === today) {
     const [hours, minutes] = (contract.terminusTime || '23:59').split(':').map(Number);
@@ -364,7 +365,7 @@ function isDeadlinePassed(contract: Contract): boolean {
     deadlineTime.setHours(hours, minutes, 0, 0);
     return now > deadlineTime;
   }
-  
+
   return false;
 }
 
@@ -373,27 +374,27 @@ function isDeadlinePassed(contract: Contract): boolean {
  */
 export async function burnExpiredContracts(): Promise<Contract[]> {
   if (!browser) return [];
-  
+
   let expiredContracts: Contract[] = [];
-  
+
   // Get current active contracts from store
   contracts.subscribe(($contracts) => {
     expiredContracts = $contracts.filter(
       (c) => c.status === 'active' && isDeadlinePassed(c)
     );
   })();
-  
+
   if (expiredContracts.length === 0) return [];
-  
+
   const ids = expiredContracts.map((c) => c.id);
-  
+
   // Update in store immediately (optimistic)
   contracts.update((list) =>
     list.map((c) =>
       ids.includes(c.id) ? { ...c, status: 'burned' as const } : c
     )
   );
-  
+
   // Persist to database
   try {
     await Promise.all(
@@ -402,7 +403,7 @@ export async function burnExpiredContracts(): Promise<Contract[]> {
   } catch (err) {
     console.error('Failed to burn expired contracts:', err);
   }
-  
+
   return expiredContracts.map((c) => ({ ...c, status: 'burned' as const }));
 }
 
@@ -412,22 +413,28 @@ export async function burnExpiredContracts(): Promise<Contract[]> {
  */
 export function startDeadlineMonitoring(): void {
   if (!browser || deadlineCheckInterval) return;
-  
+
   // Check immediately on start
   burnExpiredContracts().then((burned) => {
     if (burned.length > 0) {
       console.log(`[BURN] ${burned.length} contract(s) burned in real-time`);
+      // Track analytics for real-time burns
+      trackContractsBurned(burned.length);
+
       // Show Mission Report if contracts were burned during monitoring
       morningReportBurned.set(burned);
       morningReportOpen.set(true);
     }
   });
-  
+
   // Then check every 30 seconds
   deadlineCheckInterval = setInterval(async () => {
     const burned = await burnExpiredContracts();
     if (burned.length > 0) {
       console.log(`[BURN] ${burned.length} contract(s) burned in real-time`);
+      // Track analytics for real-time burns
+      trackContractsBurned(burned.length);
+
       morningReportBurned.set(burned);
       morningReportOpen.set(true);
     }
