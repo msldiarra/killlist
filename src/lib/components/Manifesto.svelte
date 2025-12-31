@@ -56,12 +56,6 @@
                 </p>
                 <p class="text-white">You execute, or you lose.</p>
             </div>
-
-            <p
-                class="text-xl font-bold uppercase tracking-widest text-white animate-pulse"
-            >
-                Sleep is the cousin of death. Wake up.
-            </p>
         </div>
 
         <!-- Close Action -->

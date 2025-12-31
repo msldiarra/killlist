@@ -242,8 +242,8 @@
   <Manifesto onClose={() => (showManifesto = false)} />
 {/if}
 
-<!-- Footer Link (Bottom Center - Above Input) - Only on Active Tab -->
-{#if $page.url.pathname === "/"}
+<!-- Footer Link (Bottom Center - Above Input) - Only on Registry Tab -->
+{#if $page.url.pathname === "/registry"}
   <button
     class="fixed bottom-32 left-1/2 -translate-x-1/2 z-[30] text-[10px] text-zinc-600 hover:text-white uppercase tracking-widest transition-colors font-mono cursor-pointer"
     onclick={() => (showManifesto = true)}
