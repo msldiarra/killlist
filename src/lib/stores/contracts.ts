@@ -36,9 +36,18 @@ export const morningReportBurned = writable<Contract[]>([]);
 // Registry contracts (backlog - no timer yet)
 export const registryContracts = derived(contracts, ($contracts) =>
   $contracts
-    .filter((c) => c.status === 'registry')
+    .filter((c) => c.status === 'registry' && (!c.frozenUntil || new Date(c.frozenUntil) <= new Date()))
     .sort((a, b) => {
-      // Sort by creation date, newest first
+      // 1. Sort by Priority (High Table first)
+      if (a.priority === 'highTable' && b.priority !== 'highTable') return -1;
+      if (a.priority !== 'highTable' && b.priority === 'highTable') return 1;
+
+      // 2. Sort by Manual Order (if exists)
+      if (a.order !== undefined && b.order !== undefined) {
+        return a.order - b.order;
+      }
+
+      // 3. Fallback: Sort by creation date, newest first
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     })
 );
@@ -51,9 +60,18 @@ export const todayActiveContracts = derived(
   [contracts, todayDate],
   ([$contracts, $today]) =>
     $contracts
-      .filter((c) => c.targetDate === $today && c.status === 'active')
+      .filter((c) => c.targetDate === $today && c.status === 'active' && (!c.frozenUntil || new Date(c.frozenUntil) <= new Date()))
       .sort((a, b) => {
-        // Sort by terminusTime if available
+        // 1. Sort by Priority (High Table first)
+        if (a.priority === 'highTable' && b.priority !== 'highTable') return -1;
+        if (a.priority !== 'highTable' && b.priority === 'highTable') return 1;
+
+        // 2. Sort by Manual Order (if exists)
+        if (a.order !== undefined && b.order !== undefined) {
+          return a.order - b.order;
+        }
+
+        // 3. Fallback: Sort by terminusTime if available
         const aTime = a.terminusTime || '23:59';
         const bTime = b.terminusTime || '23:59';
         return aTime.localeCompare(bTime);
@@ -323,6 +341,65 @@ export function deleteContractOptimistic(id: string): void {
       contracts.update((list) => [...list, removedContract!]);
     }
   });
+}
+
+/**
+ * Toggle Contract Priority (Golden Marker)
+ * Promotes normal to highTable, or demotes highTable to normal.
+ */
+export function togglePriority(id: string): void {
+  // Update store immediately
+  contracts.update((list) =>
+    list.map((c) => {
+      if (c.id === id) {
+        const newPriority = c.priority === 'highTable' ? 'normal' : 'highTable';
+        // Persist async
+        db.contracts.update(id, { priority: newPriority }).catch(console.error);
+        return { ...c, priority: newPriority };
+      }
+      return c;
+    })
+  );
+}
+
+/**
+ * Reorder contracts (Tactical Reshuffle)
+ * Updates the 'order' field for a list of contracts.
+ */
+export function reorderContracts(ids: string[]): void {
+  // Update store immediately
+  contracts.update((list) => {
+    return list.map(c => {
+      const newIndex = ids.indexOf(c.id);
+      if (newIndex !== -1) {
+        // Persist async (fire and forget individual updates for now)
+        // In a real app, bulk update would be better
+        db.contracts.update(c.id, { order: newIndex }).catch(console.error);
+        return { ...c, order: newIndex };
+      }
+      return c;
+    });
+  });
+}
+
+/**
+ * Freeze a contract (Cryo-Storage)
+ * Removing it from active view until frozenUntil date.
+ * Effectively hides it from active/registry lists if filters respect it.
+ */
+export function freezeContract(id: string, durationMinutes: number = 1440): void { // Default 24h
+  const frozenUntil = new Date(Date.now() + durationMinutes * 60000).toISOString();
+
+  // Update store
+  contracts.update((list) =>
+    list.map(c => {
+      if (c.id === id) {
+        db.contracts.update(id, { frozenUntil }).catch(console.error);
+        return { ...c, frozenUntil };
+      }
+      return c;
+    })
+  );
 }
 
 /**

@@ -2,9 +2,15 @@
   import { onMount } from "svelte"; // Add onMount
   import { slide } from "svelte/transition";
   import type { Contract } from "$lib/db";
-  import { playExecuteSound, unlockAudio } from "$lib/audio";
+  import {
+    playExecuteSound,
+    unlockAudio,
+    playChargeUp,
+    playLock,
+  } from "$lib/audio";
   import { trackContractKilled, trackContractAborted } from "$lib/analytics";
   import { downloadMissionICS } from "$lib/ics";
+  import { vibrate, HapticPatterns } from "$lib/haptic";
 
   // Props
   interface Props {
@@ -12,9 +18,20 @@
     onComplete: (id: string) => void;
     onAbort?: (id: string) => void;
     onExpand?: (id: string, expanded: boolean) => void;
+    onTogglePriority?: (id: string) => void;
+    onFreeze?: (id: string) => void;
+    onDragStart?: () => void;
   }
 
-  let { contract, onComplete, onAbort, onExpand }: Props = $props();
+  let {
+    contract,
+    onComplete,
+    onAbort,
+    onExpand,
+    onTogglePriority,
+    onFreeze,
+    onDragStart,
+  }: Props = $props();
 
   // State
   let offsetX = $state(0);
@@ -82,14 +99,27 @@
     }
   }
 
+  // Long Press State
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  let hasTriggeredLongPress = false;
+  const LONG_PRESS_DURATION = 800; // ms
+
   // Touch handlers
   function handleTouchStart(e: TouchEvent) {
     if (isCompleting) return;
 
     isDragging = true;
     didSwipe = false;
+    hasTriggeredLongPress = false;
     startX = e.touches[0].clientX;
     startTime = Date.now();
+
+    // Start Long Press Timer
+    longPressTimer = setTimeout(() => {
+      if (Math.abs(offsetX) < TAP_TOLERANCE) {
+        triggerLongPress();
+      }
+    }, LONG_PRESS_DURATION);
   }
 
   function handleTouchMove(e: TouchEvent) {
@@ -100,28 +130,65 @@
     // Mark as swipe if movement exceeds tap tolerance
     if (Math.abs(deltaX) > TAP_TOLERANCE) {
       didSwipe = true;
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
     }
 
-    // Only allow swipe right
-    offsetX = Math.max(0, deltaX);
+    // Allow swipe LEFT (negative) for Cryo, RIGHT (positive) for Execute
+    // Right: Execute (limit to positive if desired, but we want full feedback)
+    // Left: Cryo (negative values)
+    offsetX = deltaX;
   }
 
   function handleTouchEnd() {
     if (!isDragging || isCompleting) return;
 
     isDragging = false;
+    if (longPressTimer) clearTimeout(longPressTimer);
 
     const elapsed = Date.now() - startTime;
     const velocity = offsetX / elapsed;
 
-    // Check if swipe was aggressive enough
-    if (offsetX > SWIPE_THRESHOLD || velocity > VELOCITY_THRESHOLD) {
+    // SWIPE RIGHT -> EXECUTE (existing logic)
+    if (
+      offsetX > SWIPE_THRESHOLD ||
+      (offsetX > 0 && velocity > VELOCITY_THRESHOLD)
+    ) {
       didSwipe = true;
       triggerCompletion();
-    } else {
+    }
+    // SWIPE FULL LEFT -> ABORT (Return to Registry) - Threshold -150px
+    else if (offsetX < -150) {
+      didSwipe = true;
+      triggerAbort();
+    }
+    // SWIPE SHORT LEFT -> ABORT (removed/optional? actually user said "Swipe FULL LEFT to Freeze". Short left might be Expand or ignore?)
+    // Let's keep it simple: Reset if not full left.
+    else {
       // Spring back
       offsetX = 0;
     }
+  }
+
+  function triggerLongPress() {
+    if (isCompleting || didSwipe || hasTriggeredLongPress) return;
+
+    hasTriggeredLongPress = true;
+    vibrate(HapticPatterns.Medium);
+    playChargeUp();
+    onTogglePriority?.(contract.id);
+  }
+
+  function triggerAbort() {
+    vibrate(HapticPatterns.Heavy);
+    playLock();
+    // Visual feedback for abort
+    offsetX = -400; // Slide off left
+    setTimeout(() => {
+      onAbort?.(contract.id);
+    }, 300);
   }
 
   function triggerCompletion() {
@@ -170,17 +237,29 @@
 
 <div class="relative overflow-hidden" style="touch-action: pan-y;">
   <!-- Swipe reveal background - KILLED stamp -->
+  <!-- Swipe reveal background -->
   <div
     class="absolute inset-0 flex items-center justify-center transition-colors duration-200"
-    style="background: linear-gradient(to right, rgba(34, 197, 94, {0.3 *
-      swipeProgress}), rgba(212, 175, 55, {0.2 * swipeProgress}));"
+    style="background: {offsetX > 0
+      ? `linear-gradient(to right, rgba(34, 197, 94, ${0.3 * swipeProgress}), rgba(212, 175, 55, ${0.2 * swipeProgress}))`
+      : `linear-gradient(to left, rgba(59, 130, 246, ${0.3 * Math.min(1, Math.abs(offsetX) / 150)}), rgba(147, 197, 253, ${0.2 * Math.min(1, Math.abs(offsetX) / 150)}))`};"
   >
-    {#if swipeProgress > 0.3}
+    {#if offsetX > 50}
       <div
         class="text-green-500 text-xl font-bold tracking-widest uppercase transform -rotate-12 border-2 border-green-500 px-4 py-1"
         style="opacity: {swipeProgress}; font-family: 'JetBrains Mono', monospace;"
       >
         KILLED
+      </div>
+    {:else if offsetX < -50}
+      <div
+        class="text-blue-400 text-xl font-bold tracking-widest uppercase transform rotate-12 border-2 border-blue-400 px-4 py-1"
+        style="opacity: {Math.min(
+          1,
+          Math.abs(offsetX) / 150,
+        )}; font-family: 'JetBrains Mono', monospace;"
+      >
+        FREEZE
       </div>
     {/if}
   </div>
@@ -201,6 +280,13 @@
     ontouchcancel={() => {
       isDragging = false;
       offsetX = 0;
+      longPressTimer && clearTimeout(longPressTimer);
+    }}
+    onpointerdown={(e) => e.stopPropagation()}
+    onmousedown={(e) => e.stopPropagation()}
+    oncontextmenu={(e) => {
+      e.preventDefault();
+      triggerLongPress();
     }}
   >
     <div class="p-4">
@@ -303,13 +389,17 @@
 
     <!-- Grip Handle (Affordance) -->
     <div
-      class="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center pointer-events-none opacity-50"
-      class:hidden={isCompleting || isExecutiveOrder}
+      class="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center cursor-move text-neutral-600 hover:text-neutral-400 z-10"
+      class:hidden={isCompleting}
+      onpointerdown={(e) => {
+        onDragStart?.();
+      }}
+      ontouchstart={(e) => {
+        onDragStart?.();
+      }}
+      onclick={(e) => e.stopPropagation()}
     >
-      <span
-        class="text-neutral-600 text-lg font-light select-none animate-pulse"
-        >»</span
-      >
+      <span class="text-neutral-600 text-lg font-light select-none">»</span>
     </div>
 
     <!-- KILLED stamp overlay -->

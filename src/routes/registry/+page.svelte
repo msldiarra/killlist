@@ -11,12 +11,16 @@
     addContract,
     acceptContractOptimistic,
     deleteContractOptimistic,
+    reorderContracts,
     settings,
   } from "$lib/stores/contracts";
   import { playLoad, unlockAudio } from "$lib/audio";
   import { vibrate, HapticPatterns } from "$lib/haptic";
   import { trackContractAccepted, trackDossierFiled } from "$lib/analytics";
   import { trainingStore } from "$lib/stores/training";
+  import type { Contract } from "$lib/db";
+  import { dndzone, type DndEvent } from "svelte-dnd-action";
+  import { flip } from "svelte/animate";
 
   // Redirect if not onboarded
   $effect(() => {
@@ -63,6 +67,52 @@
   let isHighTable = $state(false);
   let expandedId: string | null = $state(null);
 
+  // Drag & Drop State (svelte-dnd-action)
+  let items: any[] = $state([]);
+  let dragDisabled = $state(true);
+  let isDragging = $state(false);
+
+  // Sync visibleContracts to items when not dragging
+  $effect(() => {
+    // Always sync if IDs mismatch (and not currently dragging)
+    if (isDragging) return;
+
+    // Force disable if training
+    if (isActivation || isAcquisition || isSecureComms) {
+      dragDisabled = true;
+    }
+
+    const currentIds = items.map((i) => i.id).join(",");
+    const newIds = visibleContracts.map((c) => c.id).join(",");
+    if (currentIds !== newIds) {
+      items = [...visibleContracts];
+    }
+  });
+
+  function startDrag() {
+    if (isActivation || isAcquisition || isSecureComms) return;
+    dragDisabled = false;
+  }
+
+  function handleDndConsider(e: CustomEvent<DndEvent<any>>) {
+    isDragging = true;
+    items = e.detail.items;
+    // Keep it enabled while considering
+    dragDisabled = false;
+  }
+
+  function handleDndFinalize(e: CustomEvent<DndEvent<any>>) {
+    isDragging = false;
+    items = e.detail.items;
+
+    // DISABLE drag again immediately after drop
+    dragDisabled = true;
+
+    // Persist order
+    reorderContracts(items.map((i) => i.id));
+    vibrate(HapticPatterns.Heavy);
+  }
+
   // Swipe state for each contract
   let swipeStates: { [key: string]: { x: number; swiping: boolean } } = $state(
     {},
@@ -70,6 +120,7 @@
 
   // Toggle expand state
   function toggleExpand(id: string) {
+    if (isDragging) return;
     expandedId = expandedId === id ? null : id;
   }
 
@@ -299,166 +350,198 @@
       </div>
     {:else}
       <!-- Contract list - Dense "Cold Storage" style -->
-      <div class="space-y-1">
-        {#each visibleContracts as contract, i (contract.id)}
+      <div
+        class="space-y-1"
+        use:dndzone={{
+          items,
+          dragDisabled,
+          flipDurationMs: 200,
+          dropTargetStyle: {},
+        }}
+        onconsider={handleDndConsider}
+        onfinalize={handleDndFinalize}
+      >
+        {#each items as contract, i (contract.id)}
           {@const swipeProgress = getSwipeProgress(contract.id)}
           {@const isHighTableOrder = contract.priority === "highTable"}
           {@const isExpanded = expandedId === contract.id}
-
-          <div
-            class="relative overflow-hidden bg-neutral-900 border border-neutral-800 group cursor-pointer transition-colors hover:border-neutral-700"
-            ontouchstart={(e) => handleTouchStart(contract.id, e)}
-            onclick={() => toggleExpand(contract.id)}
-          >
-            <!-- Training Swipe Cue -->
-            {#if isActivation && i === visibleContracts.length - 1}
-              <div
-                class="absolute right-4 top-1/2 -translate-y-1/2 z-20 pointer-events-none flex items-center gap-2 animate-pulse text-kl-gold"
-                transition:fade
-              >
-                <span
-                  class="text-xs tracking-widest bg-black/80 px-2 py-1 border border-kl-gold/30 shadow-[0_0_10px_rgba(212,175,55,0.2)]"
-                  >SWIPE RIGHT</span
-                >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M13 7l5 5m0 0l-5 5m5-5H6"
-                  />
-                </svg>
-              </div>
-            {/if}
-
-            <!-- Swipe accept indicator (background) -->
+          <div animate:flip={{ duration: 200 }}>
             <div
-              class="absolute inset-y-0 left-0 bg-green-900/50 flex items-center pl-4 transition-all"
-              style="width: {swipeProgress * 100}%;"
+              class="relative overflow-hidden bg-neutral-900 border border-neutral-800 group cursor-pointer transition-colors hover:border-neutral-700"
+              ontouchstart={(e) => {
+                // Prevent drag (dndzone) from seeing this touch
+                e.stopPropagation();
+                handleTouchStart(contract.id, e);
+              }}
+              onpointerdown={(e) => {
+                // Crucial: dndzone likely uses pointer events. Stop them here.
+                e.stopPropagation();
+              }}
+              onmousedown={(e) => {
+                // Prevent drag (dndzone) from seeing this click
+                e.stopPropagation();
+              }}
+              onclick={() => toggleExpand(contract.id)}
             >
-              {#if swipeProgress > 0.5}
-                <span class="text-green-400 text-xs tracking-widest"
-                  >ACCEPT</span
-                >
-              {/if}
-            </div>
-
-            <!-- Contract content -->
-            <div
-              class="relative transition-transform"
-              style="transform: translateX({swipeStates[contract.id]?.x ||
-                0}px);"
-            >
-              <!-- Main row -->
-              <div class="flex items-center gap-3 p-3 pl-7">
-                <!-- Priority indicator -->
-                <div class="flex-shrink-0">
-                  {#if isHighTableOrder}
-                    <div class="w-2 h-2 rounded-full bg-kl-crimson"></div>
-                  {:else}
-                    <div class="w-2 h-2 rounded-full bg-neutral-600"></div>
-                  {/if}
-                </div>
-
-                <!-- Title (truncated or expanded) -->
-                <div class="flex-1 min-w-0">
-                  <span
-                    class="text-sm block {isExpanded
-                      ? 'text-white whitespace-pre-wrap break-words'
-                      : 'text-neutral-300 truncate'}"
-                  >
-                    {contract.title}
-                  </span>
-                </div>
-
-                <!-- Terminus time -->
-                <span
-                  class="text-[10px] text-neutral-600 tracking-wider flex-shrink-0"
-                >
-                  {contract.terminusTime || "23:59"}
-                </span>
-
-                <!-- Desktop actions (always visible when expanded) -->
+              <!-- Training Swipe Cue -->
+              {#if isActivation && i === visibleContracts.length - 1}
                 <div
-                  class="hidden md:flex items-center gap-2 {isExpanded
-                    ? 'opacity-100'
-                    : 'opacity-0 group-hover:opacity-100'} transition-opacity"
+                  class="absolute right-4 top-1/2 -translate-y-1/2 z-20 pointer-events-none flex items-center gap-2 animate-pulse text-kl-gold"
+                  transition:fade
                 >
-                  <!-- Accept button (SIGN stamp) -->
-                  <button
-                    type="button"
-                    class="px-2 py-1 border border-green-700 text-green-500 text-[10px] tracking-widest hover:bg-green-900/30 transition-colors"
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      handleAccept(contract.id);
-                    }}
+                  <span
+                    class="text-xs tracking-widest bg-black/80 px-2 py-1 border border-kl-gold/30 shadow-[0_0_10px_rgba(212,175,55,0.2)]"
+                    >SWIPE RIGHT</span
                   >
-                    SIGN
-                  </button>
-
-                  <!-- Delete button -->
-                  <button
-                    type="button"
-                    class="px-2 py-1 border border-neutral-700 text-neutral-500 text-[10px] tracking-widest hover:bg-neutral-800 transition-colors"
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(contract.id);
-                    }}
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    ✕
-                  </button>
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13 7l5 5m0 0l-5 5m5-5H6"
+                    />
+                  </svg>
                 </div>
-              </div>
+              {/if}
 
-              <!-- Grip Handle -->
+              <!-- Swipe accept indicator (background) -->
               <div
-                class="absolute left-0 top-0 bottom-0 w-4 flex items-center justify-center pointer-events-none opacity-30 z-10"
+                class="absolute inset-y-0 left-0 bg-green-900/50 flex items-center pl-4 transition-all"
+                style="width: {swipeProgress * 100}%;"
               >
-                <span
-                  class="text-neutral-600 text-sm font-light select-none animate-pulse"
-                  >»</span
-                >
+                {#if swipeProgress > 0.5}
+                  <span class="text-green-400 text-xs tracking-widest"
+                    >ACCEPT</span
+                  >
+                {/if}
               </div>
 
-              <!-- Expanded content panel -->
-              {#if isExpanded}
-                <div class="px-3 pb-3" transition:slide={{ duration: 200 }}>
-                  <div
-                    class="flex items-center justify-between pt-2 border-t border-neutral-800"
-                  >
-                    <!-- Metadata -->
-                    <div
-                      class="flex flex-col gap-1 text-[10px] text-neutral-500"
-                    >
-                      <span
-                        >Created: {new Date(
-                          contract.createdAt,
-                        ).toLocaleDateString()}</span
-                      >
-                      {#if isHighTableOrder}
-                        <span class="text-kl-crimson">EXECUTIVE ORDER</span>
-                      {/if}
-                    </div>
+              <!-- Contract content -->
+              <div
+                class="relative transition-transform"
+                style="transform: translateX({swipeStates[contract.id]?.x ||
+                  0}px);"
+              >
+                <!-- Main row -->
+                <div class="flex items-center gap-3 p-3 pl-7">
+                  <!-- Priority indicator -->
+                  <div class="flex-shrink-0">
+                    {#if isHighTableOrder}
+                      <div class="w-2 h-2 rounded-full bg-kl-crimson"></div>
+                    {:else}
+                      <div class="w-2 h-2 rounded-full bg-neutral-600"></div>
+                    {/if}
+                  </div>
 
-                    <!-- Accept button (mobile-friendly when expanded) -->
+                  <!-- Title (truncated or expanded) -->
+                  <div class="flex-1 min-w-0">
+                    <span
+                      class="text-sm block {isExpanded
+                        ? 'text-white whitespace-pre-wrap break-words'
+                        : 'text-neutral-300 truncate'}"
+                    >
+                      {contract.title}
+                    </span>
+                  </div>
+
+                  <!-- Terminus time -->
+                  <span
+                    class="text-[10px] text-neutral-600 tracking-wider flex-shrink-0"
+                  >
+                    {contract.terminusTime || "23:59"}
+                  </span>
+
+                  <!-- Desktop actions (always visible when expanded) -->
+                  <div
+                    class="hidden md:flex items-center gap-2 {isExpanded
+                      ? 'opacity-100'
+                      : 'opacity-0 group-hover:opacity-100'} transition-opacity"
+                  >
+                    <!-- Accept button (SIGN stamp) -->
                     <button
                       type="button"
-                      class="px-4 py-2 border border-kl-gold text-kl-gold text-xs tracking-widest hover:bg-kl-gold/10 transition-colors uppercase"
+                      class="px-2 py-1 border border-green-700 text-green-500 text-[10px] tracking-widest hover:bg-green-900/30 transition-colors"
                       onclick={(e) => {
                         e.stopPropagation();
                         handleAccept(contract.id);
                       }}
                     >
-                      [ACCEPT]
+                      SIGN
+                    </button>
+
+                    <!-- Delete button -->
+                    <button
+                      type="button"
+                      class="px-2 py-1 border border-neutral-700 text-neutral-500 text-[10px] tracking-widest hover:bg-neutral-800 transition-colors"
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(contract.id);
+                      }}
+                    >
+                      ✕
                     </button>
                   </div>
                 </div>
-              {/if}
+
+                <!-- Grip Handle -> Drag Handle -->
+                <div
+                  class="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center cursor-move text-neutral-600 hover:text-neutral-400 z-10"
+                  onpointerdown={(e) => {
+                    startDrag();
+                  }}
+                  touchstart={(e) => {
+                    // Ensure touch also triggers it immediately
+                    startDrag();
+                  }}
+                  onclick={(e) => e.stopPropagation()}
+                >
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"
+                    ><path
+                      d="M7 19v-2h2v2H7zm0-6v-2h2v2H7zm0-6V5h2v2H7zm4 4h10v2H11v-2zm0 6h10v2H11v-2zm0-12h10v2H11V5z"
+                    ></path></svg
+                  >
+                </div>
+
+                <!-- Expanded content panel -->
+                {#if isExpanded}
+                  <div class="px-3 pb-3" transition:slide={{ duration: 200 }}>
+                    <div
+                      class="flex items-center justify-between pt-2 border-t border-neutral-800"
+                    >
+                      <!-- Metadata -->
+                      <div
+                        class="flex flex-col gap-1 text-[10px] text-neutral-500"
+                      >
+                        <span
+                          >Created: {new Date(
+                            contract.createdAt,
+                          ).toLocaleDateString()}</span
+                        >
+                        {#if isHighTableOrder}
+                          <span class="text-kl-crimson">EXECUTIVE ORDER</span>
+                        {/if}
+                      </div>
+
+                      <!-- Accept button (mobile-friendly when expanded) -->
+                      <button
+                        type="button"
+                        class="px-4 py-2 border border-kl-gold text-kl-gold text-xs tracking-widest hover:bg-kl-gold/10 transition-colors uppercase"
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          handleAccept(contract.id);
+                        }}
+                      >
+                        [ACCEPT]
+                      </button>
+                    </div>
+                  </div>
+                {/if}
+              </div>
             </div>
           </div>
         {/each}

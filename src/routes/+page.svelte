@@ -2,6 +2,7 @@
   import { goto } from "$app/navigation";
   import { browser } from "$app/environment";
   import { fade } from "svelte/transition";
+  import { flip } from "svelte/animate";
   import { page } from "$app/stores";
   import OathScreen from "$lib/components/OathScreen.svelte";
   import ContractCard from "$lib/components/ContractCard.svelte";
@@ -16,10 +17,14 @@
     killContractOptimistic,
     abortContractOptimistic,
     completeOnboardingOptimistic,
-    openCount,
     registryCount,
+    openCount,
+    togglePriority,
+    freezeContract,
+    reorderContracts,
   } from "$lib/stores/contracts";
   import { trackOathCompleted } from "$lib/analytics";
+  import { dndzone, type DndEvent } from "svelte-dnd-action";
 
   // UI State
   let showOath = $state(true);
@@ -33,6 +38,7 @@
   });
 
   // Check localStorage for oath_signed (quick check for returning users)
+  // Check localStorage for oath_signed (quick check for returning users)
   $effect(() => {
     if (browser && localStorage.getItem("oath_signed") === "true") {
       showOath = false;
@@ -40,6 +46,42 @@
   });
 
   import { trainingStore } from "$lib/stores/training";
+  import { HapticPatterns, vibrate } from "$lib/haptic";
+
+  // Drag & Drop
+  let items: any[] = $state([]);
+  let dragDisabled = $state(true);
+  let isDragging = $state(false);
+
+  $effect(() => {
+    if (isDragging) return;
+    // Always sync items with store to capture property changes (like Priority)
+    items = [...$todayActiveContracts];
+  });
+
+  function handleDndConsider(e: CustomEvent<DndEvent<any>>) {
+    items = e.detail.items;
+    isDragging = true;
+    dragDisabled = false; // Keep enabled during drag
+  }
+
+  function handleDndFinalize(e: CustomEvent<DndEvent<any>>) {
+    items = e.detail.items;
+    isDragging = false;
+    dragDisabled = true; // Disable immediately
+    reorderContracts(items.map((i) => i.id));
+    vibrate(HapticPatterns.Heavy);
+  }
+
+  function startDrag() {
+    // Prevent drag during training execution to avoid confusion
+    if (
+      $trainingStore.phase === "execution" ||
+      $trainingStore.phase === "executionExpand"
+    )
+      return;
+    dragDisabled = false;
+  }
 
   function handleOathComplete() {
     // Mark oath as signed in localStorage (quick gatekeeper check)
@@ -213,9 +255,20 @@ https://killlist.app
       </div>
     {:else}
       <!-- Contract list -->
-      <div class="space-y-3">
-        {#each $todayActiveContracts as contract, i (contract.id)}
+      <div
+        class="space-y-3"
+        use:dndzone={{
+          items,
+          dragDisabled,
+          flipDurationMs: 300,
+          dropTargetStyle: {},
+        }}
+        onconsider={handleDndConsider}
+        onfinalize={handleDndFinalize}
+      >
+        {#each items as contract, i (contract.id)}
           <div
+            animate:flip={{ duration: 300 }}
             class="relative"
             class:ring-2={$trainingStore.phase === "executionExpand" ||
               $trainingStore.phase === "execution"}
@@ -290,6 +343,9 @@ https://killlist.app
                   trainingStore.advanceToExecutionExpand();
                 }
               }}
+              onTogglePriority={(id) => togglePriority(id)}
+              onFreeze={(id) => freezeContract(id)}
+              onDragStart={startDrag}
             />
           </div>
         {/each}
