@@ -364,7 +364,11 @@
         <div
           class="bg-neutral-900/50 border border-kl-gold/10 p-4 overflow-hidden"
         >
-          <MorgueHeatmap countsByDate={stats.countsByDate} days={365} />
+          <MorgueHeatmap
+            countsByDate={stats.countsByDate}
+            days={370}
+            startDate="2025-12-01"
+          />
         </div>
       </section>
 
