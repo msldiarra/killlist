@@ -20,6 +20,8 @@
   import { trainingStore } from "$lib/stores/training";
   import { playLoad, unlockAudio } from "$lib/audio";
   import { vibrate, HapticPatterns } from "$lib/haptic";
+  import { toPng } from "html-to-image";
+  import MissionReportCard from "$lib/components/MissionReportCard.svelte";
 
   // Redirect if not onboarded
   $effect(() => {
@@ -94,6 +96,51 @@
       day: "numeric",
     });
   }
+
+  // Generate and Share Report
+  let sharing = $state(false);
+
+  async function handleShareReport() {
+    if (sharing) return;
+    sharing = true;
+    unlockAudio();
+    playLoad();
+    vibrate(HapticPatterns.Heavy);
+
+    try {
+      const node = document.getElementById("mission-report-card");
+      if (!node) throw new Error("Report card not found");
+
+      // Generate Image
+      const dataUrl = await toPng(node, { cacheBust: true, pixelRatio: 2 });
+
+      // Convert to Blob
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], "mission-report.png", {
+        type: "image/png",
+      });
+
+      // Share
+      if (navigator.share) {
+        await navigator.share({
+          files: [file],
+          title: "Mission Report",
+          text: `Mission Status: ${stats.totalKills > 0 ? "LETHAL" : "ACTIVE"}`,
+        });
+      } else {
+        // Fallback: Download
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = "killlist-report.png";
+        a.click();
+      }
+    } catch (err) {
+      console.error("Share failed", err);
+    } finally {
+      sharing = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -167,8 +214,56 @@
   <header
     class="flex items-center justify-center px-6 py-5 border-b border-kl-gold/10"
   >
-    <h1 class="text-xl tracking-widest text-kl-gold">THE MORGUE</h1>
+    <div class="flex items-center gap-4">
+      <h1 class="text-xl tracking-widest text-kl-gold">THE MORGUE</h1>
+      <button
+        onclick={handleShareReport}
+        class="text-kl-gold/50 hover:text-kl-gold transition-colors"
+        disabled={sharing}
+        title="Share Report"
+      >
+        {#if sharing}
+          <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"
+            ><circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle><path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path></svg
+          >
+        {:else}
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+            ></path></svg
+          >
+        {/if}
+      </button>
+    </div>
   </header>
+
+  <!-- Hidden Report Card for Generation -->
+  <div class="fixed left-[-9999px] top-0 pointer-events-none z-[-1]">
+    {#if !isLoading}
+      <MissionReportCard
+        bodyCount={stats.totalKills}
+        streak={stats.currentStreak}
+      />
+    {/if}
+  </div>
 
   <!-- Content -->
   <main class="flex-1 px-6">
