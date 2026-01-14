@@ -337,9 +337,21 @@ export function deleteContractOptimistic(id: string): void {
   db.contracts.delete(id).catch((err) => {
     console.error('Failed to delete contract:', err);
     // Rollback
-    if (removedContract) {
-      contracts.update((list) => [...list, removedContract!]);
-    }
+  });
+}
+
+/**
+ * Update contract title (Amend Intel)
+ */
+export function updateContractTitle(id: string, newTitle: string): void {
+  // Option 1: Optimistic Update
+  contracts.update((list) =>
+    list.map((c) => (c.id === id ? { ...c, title: newTitle } : c))
+  );
+
+  // Option 2: Async Persist
+  db.contracts.update(id, { title: newTitle }).catch((err) => {
+    console.error('Failed to update contract title:', err);
   });
 }
 
