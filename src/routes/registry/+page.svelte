@@ -70,6 +70,7 @@
   let newContractTitle = $state("");
   let isHighTable = $state(false);
   let expandedId: string | null = $state(null);
+  let deleteConfirmId: string | null = $state(null);
 
   // Drag & Drop State (svelte-dnd-action)
   let items: any[] = $state([]);
@@ -537,56 +538,96 @@
                 {#if isExpanded}
                   <div class="px-3 pb-3" transition:slide={{ duration: 200 }}>
                     <div
-                      class="flex items-center justify-between pt-2 border-t border-neutral-800"
+                      class="pt-3 border-t border-neutral-800 flex flex-col gap-3"
                     >
-                      <!-- Metadata -->
-                      <div
-                        class="flex flex-col gap-1 text-[10px] text-neutral-500"
-                      >
-                        <span
-                          >Created: {new Date(
-                            contract.createdAt,
-                          ).toLocaleDateString()}</span
-                        >
-                        {#if isHighTableOrder}
-                          <span class="text-kl-crimson">EXECUTIVE ORDER</span>
-                        {/if}
+                      <!-- Row 1: Stats & Primary Actions -->
+                      <div class="flex items-center justify-between">
+                        <!-- Left: Status Only -->
+                        <div>
+                          {#if isHighTableOrder}
+                            <span
+                              class="text-kl-crimson text-[10px] tracking-widest"
+                              >EXECUTIVE ORDER</span
+                            >
+                          {/if}
+                        </div>
+
+                        <!-- Right: Action Buttons -->
+                        <div class="flex items-center gap-3">
+                          <button
+                            type="button"
+                            class="px-3 py-2 border border-neutral-700 text-neutral-500 text-xs tracking-widest hover:text-neutral-300 transition-colors uppercase flex items-center gap-2"
+                            onclick={(e) => {
+                              e.stopPropagation();
+                              shareContract(contract);
+                            }}
+                          >
+                            [<svg
+                              class="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              ><path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                              ></path></svg
+                            >
+                            ASSIGN]
+                          </button>
+
+                          <button
+                            type="button"
+                            class="px-4 py-2 border border-kl-gold text-kl-gold text-xs tracking-widest hover:bg-kl-gold/10 transition-colors uppercase"
+                            onclick={(e) => {
+                              e.stopPropagation();
+                              handleAccept(contract.id);
+                            }}
+                          >
+                            [ACCEPT]
+                          </button>
+                        </div>
                       </div>
 
-                      <!-- Accept button (mobile-friendly) -->
-                      <div class="flex items-center gap-3">
-                        <button
-                          type="button"
-                          class="px-3 py-2 border border-neutral-700 text-neutral-500 text-xs tracking-widest hover:text-neutral-300 transition-colors uppercase flex items-center gap-2"
-                          onclick={(e) => {
-                            e.stopPropagation();
-                            shareContract(contract);
-                          }}
+                      <!-- Row 2: Metadata & Destructive -->
+                      <div class="flex items-center justify-between">
+                        <!-- Left: Date -->
+                        <span
+                          class="text-[10px] text-neutral-600 tracking-wider"
                         >
-                          <svg
-                            class="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            ><path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                            ></path></svg
-                          >
-                          ASSIGN
-                        </button>
+                          Created: {new Date(
+                            contract.createdAt,
+                          ).toLocaleDateString()}
+                        </span>
 
+                        <!-- Right: Delete -->
+                        <!-- Right: Delete -->
                         <button
                           type="button"
-                          class="px-4 py-2 border border-kl-gold text-kl-gold text-xs tracking-widest hover:bg-kl-gold/10 transition-colors uppercase"
+                          class="px-4 py-2 border text-xs tracking-widest transition-colors uppercase {deleteConfirmId ===
+                          contract.id
+                            ? 'border-red-600 bg-red-900/20 text-red-500 font-semibold'
+                            : 'border-red-900/50 text-red-700 hover:bg-red-900/10'}"
                           onclick={(e) => {
                             e.stopPropagation();
-                            handleAccept(contract.id);
+                            if (deleteConfirmId === contract.id) {
+                              handleDelete(contract.id);
+                              deleteConfirmId = null;
+                            } else {
+                              deleteConfirmId = contract.id;
+                              // Reset confirmation after 3 seconds if not clicked
+                              setTimeout(() => {
+                                if (deleteConfirmId === contract.id) {
+                                  deleteConfirmId = null;
+                                }
+                              }, 3000);
+                            }
                           }}
                         >
-                          [ACCEPT]
+                          {deleteConfirmId === contract.id
+                            ? "[CONFIRM SHRED]"
+                            : "[DELETE]"}
                         </button>
                       </div>
                     </div>
