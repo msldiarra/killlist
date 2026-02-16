@@ -2,7 +2,7 @@
   // Props
   let {
     visible = true,
-    onFadeComplete
+    onFadeComplete,
   }: {
     visible?: boolean;
     onFadeComplete?: () => void;
@@ -29,20 +29,35 @@
     style="background-image: url('/logo.png'); background-size: cover; background-position: center; background-repeat: no-repeat;"
   >
     <!-- Loading indicator -->
-    <div class="absolute bottom-24 left-0 right-0 flex flex-col items-center gap-3" style="font-family: 'JetBrains Mono', monospace;">
+    <div
+      class="absolute bottom-24 left-0 right-0 flex flex-col items-center gap-3"
+      style="font-family: 'JetBrains Mono', monospace;"
+    >
       <div class="flex gap-1">
-        <div class="w-1.5 h-1.5 bg-kl-gold/60 rounded-full animate-bounce" style="animation-delay: 0ms;"></div>
-        <div class="w-1.5 h-1.5 bg-kl-gold/60 rounded-full animate-bounce" style="animation-delay: 150ms;"></div>
-        <div class="w-1.5 h-1.5 bg-kl-gold/60 rounded-full animate-bounce" style="animation-delay: 300ms;"></div>
+        <div
+          class="w-1.5 h-1.5 bg-kl-gold/60 rounded-full animate-bounce"
+          style="animation-delay: 0ms;"
+        ></div>
+        <div
+          class="w-1.5 h-1.5 bg-kl-gold/60 rounded-full animate-bounce"
+          style="animation-delay: 150ms;"
+        ></div>
+        <div
+          class="w-1.5 h-1.5 bg-kl-gold/60 rounded-full animate-bounce"
+          style="animation-delay: 300ms;"
+        ></div>
       </div>
-      <span class="text-kl-gold/40 text-xs tracking-widest uppercase">Initializing</span>
+      <span class="text-kl-gold/40 text-xs tracking-widest uppercase"
+        >Initializing</span
+      >
     </div>
   </div>
 {/if}
 
 <style>
   @keyframes pulse-slow {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 0.3;
       transform: scale(1);
     }
@@ -51,9 +66,4 @@
       transform: scale(1.05);
     }
   }
-
-  .animate-pulse-slow {
-    animation: pulse-slow 3s ease-in-out infinite;
-  }
 </style>
-

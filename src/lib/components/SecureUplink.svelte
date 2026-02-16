@@ -87,6 +87,7 @@
                 <button
                     onclick={() => (isOpen = false)}
                     class="text-zinc-600 hover:text-white transition-colors p-1"
+                    aria-label="Close Uplink"
                 >
                     <svg
                         class="w-4 h-4"

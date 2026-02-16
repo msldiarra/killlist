@@ -458,6 +458,8 @@
           <div animate:flip={{ duration: 200 }}>
             <div
               class="relative overflow-hidden bg-neutral-900 border border-neutral-800 group cursor-pointer transition-colors hover:border-neutral-700"
+              role="button"
+              tabindex="0"
               ontouchstart={(e) => {
                 // Prevent drag (dndzone) from seeing this touch
                 e.stopPropagation();
@@ -472,6 +474,12 @@
                 e.stopPropagation();
               }}
               onclick={() => toggleExpand(contract.id)}
+              onkeydown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleExpand(contract.id);
+                }
+              }}
             >
               <!-- Training Swipe Cue -->
               {#if isActivation && i === visibleContracts.length - 1}
@@ -537,7 +545,7 @@
                           class="w-full bg-neutral-800 border-b border-kl-gold text-white text-sm p-1 focus:outline-none resize-none overflow-hidden block"
                           style="field-sizing: content; min-height: 1.5em;"
                           rows="1"
-                          autofocus
+
                           onclick={(e) => e.stopPropagation()}
                           onblur={() => handleUpdateTitle(contract.id)}
                           onkeydown={(e) => {
@@ -603,6 +611,8 @@
                 <!-- Grip Handle -> Drag Handle -->
                 <div
                   class="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center cursor-move text-neutral-600 hover:text-neutral-400 z-10"
+                  role="button"
+                  tabindex="0"
                   onpointerdown={(e) => {
                     startDrag();
                   }}
@@ -611,6 +621,12 @@
                     startDrag();
                   }}
                   onclick={(e) => e.stopPropagation()}
+                  onkeydown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      startDrag();
+                    }
+                  }}
                 >
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"
                     ><path
@@ -845,16 +861,17 @@
               <!-- Target Name -->
               <div>
                 <label
+                  for="target-input"
                   class="block text-xs text-neutral-500 mb-2 tracking-widest"
                 >
                   TARGET NAME
                 </label>
                 <input
+                  id="target-input"
                   type="text"
                   bind:value={newContractTitle}
                   placeholder="Input Objective..."
                   class="w-full bg-neutral-800 border border-neutral-700 p-4 text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
-                  autofocus
                 />
               </div>
 
@@ -873,6 +890,7 @@
                 </span>
                 <button
                   type="button"
+                  aria-label="Toggle Executive Order"
                   class="w-12 h-6 rounded-full transition-colors relative {isHighTable
                     ? 'bg-kl-crimson'
                     : 'bg-neutral-700'}"

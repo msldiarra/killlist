@@ -214,6 +214,7 @@
         class="absolute right-12 top-1/2 -translate-y-1/2 p-2 transition-colors duration-300"
         onclick={toggleExecutiveOrder}
         disabled={isScrambling}
+        aria-label="Toggle Executive Order"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -238,6 +239,7 @@
         onclick={handleSubmit}
         disabled={!inputValue.trim() || isScrambling}
         class="px-4 py-3 text-kl-gold/50 hover:text-kl-gold transition-colors disabled:opacity-30 border-l border-neutral-800"
+        aria-label="Submit Objective"
       >
         <svg
           class="w-5 h-5"

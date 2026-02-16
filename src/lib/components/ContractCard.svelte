@@ -274,6 +274,8 @@
     style="transform: translate3d({offsetX}px, 0, 0); will-change: transform; {isDragging
       ? ''
       : 'transition: transform 0.3s ease-out;'}"
+    role="button"
+    tabindex="0"
     ontouchstart={handleTouchStart}
     ontouchmove={handleTouchMove}
     ontouchend={handleTouchEnd}
@@ -288,6 +290,12 @@
       e.preventDefault();
       triggerLongPress();
     }}
+    onkeydown={(e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleDetails();
+      }
+    }}
   >
     <div class="p-4">
       <!-- Header row: Title + Priority badge -->
@@ -295,7 +303,15 @@
         <!-- Clickable title area (tap to expand) -->
         <div
           class="flex-1 min-w-0 relative cursor-pointer select-none"
+          role="button"
+          tabindex="0"
           onclick={toggleDetails}
+          onkeydown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              toggleDetails();
+            }
+          }}
         >
           <h3
             class="text-base font-medium transition-all {isExecutiveOrder
@@ -363,6 +379,8 @@
     <div
       class="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center cursor-move text-neutral-600 hover:text-neutral-400 z-10"
       class:hidden={isCompleting}
+      role="button"
+      tabindex="0"
       onpointerdown={(e) => {
         onDragStart?.();
       }}
@@ -370,6 +388,12 @@
         onDragStart?.();
       }}
       onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onDragStart?.();
+        }
+      }}
     >
       <span class="text-neutral-600 text-lg font-light select-none">»</span>
     </div>
