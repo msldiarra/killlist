@@ -9,7 +9,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "preview": "vite preview",
-    "start": "sirv build --port ${PORT:-3000} --host 0.0.0.0 --single",
+    "start": "node build",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
